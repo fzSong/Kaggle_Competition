@@ -1,5 +1,4 @@
-# coding: utf-8
-#__author__ = 'Ravi: https://kaggle.com/company'
+
 
 rm(list = ls())
 
