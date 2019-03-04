@@ -9,6 +9,7 @@ library(readr)
 library(lattice)
 library(caret)
 library(stringdist)
+library(stringr)
 
 # Read in data
 location=fread("input/Location.csv")
@@ -28,6 +29,7 @@ dropAndNumChar <- function(itemInfo){
   itemInfo[, ':=' (ncharTitle = nchar(title),
                    ncharDescription = nchar(description),
                    description = NULL,
+                   num_images=ifelse(is.na(images_array),0,str_count(images_array,",")+1),
                    images_array = NULL,
                    attrsJSON = NULL)]
 }
@@ -87,6 +89,8 @@ createFeatures <- function(itemPairs){
                     titleStringDist = stringdist(title_1, title_2, method = "jw"),
                     titleStringDist2 = (stringdist(title_1, title_2, method = "lcs") / 
                         pmax(ncharTitle_1, ncharTitle_2, na.rm=TRUE)),
+                    titleStringDist3=stringdist(title_1, title_2,method = "cosine"),
+                    titleStringDist4=stringdist(title_1, title_2,method = "lv"),
                     title_1 = NULL,
                     title_2 = NULL,
                     titleCharDiff = pmax(ncharTitle_1/ncharTitle_2, ncharTitle_2/ncharTitle_1),
@@ -105,12 +109,21 @@ createFeatures <- function(itemPairs){
                     lon_1 = NULL,
                     lon_2 = NULL,
                     itemID_1 = NULL,
-                    itemID_2 = NULL)]
+                    itemID_2 = NULL,
+                    
+                    num_images_diff=abs(num_images_1-num_images_2),
+                    num_images_ratio=ifelse(num_images_1==0&num_images_2==0,1,
+                                            pmin(num_images_1,num_images_2)/pmax(num_images_1,num_images_2)),
+                    num_images_1=NULL,
+                    num_images_2=NULL
+                    )]
   
   itemPairs[, ':=' (priceDiff = ifelse(is.na(priceDiff), 0, priceDiff),
                     priceMin = ifelse(is.na(priceMin), 0, priceMin),
                     priceMax = ifelse(is.na(priceMax), 0, priceMax),
                     titleStringDist = ifelse(is.na(titleStringDist), 0, titleStringDist),
+                    titleStringDist3 = ifelse(is.na(titleStringDist3), 0, titleStringDist3),
+                    titleStringDist4 = ifelse(is.na(titleStringDist4), 0, titleStringDist4),
                     titleStringDist2 = ifelse(is.na(titleStringDist2) | titleStringDist2 == Inf, 0, titleStringDist2))]
 }
 
@@ -119,10 +132,10 @@ createFeatures(itemPairsTrain)
 
 library(xgboost)
 
-maxTrees <- 150 #95
-shrinkage <- 0.06 #0.09
+maxTrees <- 130 #95
+shrinkage <- 0.08 #0.09
 gamma <- 1
-depth <- 14 #13
+depth <- 13 #13
 minChildWeight <- 38
 colSample <- 0.4
 subSample <- 0.37
